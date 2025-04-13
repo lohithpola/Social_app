@@ -1,6 +1,9 @@
 package com.app.socialmedia.model;
 
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,6 +17,7 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Users{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,8 +35,16 @@ public class Users{
     @Lob
     @Column(name = "image_data", columnDefinition = "LONGBLOB")
     private byte[] imageData;
+    
     @OneToMany(mappedBy = "user")
+    @JsonManagedReference("user-posts")
     private List<Post> posts;
+    
     @OneToMany(mappedBy = "user")
+    @JsonManagedReference("user-notifications")
     private List<Notification> notifications;
+    
+    @OneToMany(mappedBy = "user")
+    @JsonManagedReference("user-comments")
+    private List<Comment> comments;
 }

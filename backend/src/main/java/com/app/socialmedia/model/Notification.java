@@ -1,5 +1,7 @@
 package com.app.socialmedia.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,6 +15,7 @@ import java.util.Date;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,7 +26,9 @@ public class Notification {
     private Date timeStamp;
     @Column(name = "is_read")
     private boolean isRead;
+    
     @ManyToOne
+    @JsonBackReference("user-notifications")
     @JoinColumn(name = "userId")
     private Users user;
 }

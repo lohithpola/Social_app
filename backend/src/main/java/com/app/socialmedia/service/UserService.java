@@ -62,6 +62,20 @@ public class UserService {
 
         return new UserDto(user.getId(), user.getUserName(), user.getImageData());
     }
+    
+    /**
+     * Find a user by their username
+     * @param username The username to search for
+     * @return The found Users object
+     * @throws UserNotFoundException if no user with the given username exists
+     */
+    public Users getUserByUserName(String username) {
+        Users user = userRepo.findByUserName(username);
+        if (user == null) {
+            throw new UserNotFoundException("User not found with username: " + username);
+        }
+        return user;
+    }
 
 
     public Users getfulluser(long userId) {

@@ -1,7 +1,7 @@
 import { Box, Button, TextField, Typography, Alert } from "@mui/material";
-import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,11 +21,16 @@ const Login = () => {
     localStorage.removeItem("jwt");
     localStorage.removeItem("user");
     
+    // Create a new axios instance just for this request to avoid any global settings issues
+    const instance = axios.create({
+      baseURL: 'http://localhost:8080',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
     try {
-      const response = await axios.post(
-        "http://localhost:8080/login",
-        logData
-      );
+      const response = await instance.post('/login', JSON.stringify(logData));
       
       // Only store JWT and navigate on successful response with valid data
       if (response.status === 200 && response.data) {

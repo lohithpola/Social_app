@@ -1,6 +1,9 @@
 package com.app.socialmedia.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,6 +18,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,12 +28,17 @@ public class Post {
     private byte[] mediaUrl;
     private Date timeStamp;
     private Integer likes;
+    
     @ManyToOne
-    @JsonIgnore
+    @JsonBackReference("user-posts")
     @JoinColumn(name = "userId")
     private Users user;
+    
     @OneToMany(mappedBy = "post")
+    @JsonManagedReference("post-comments")
     private List<Comment> comments;
+    
     @OneToMany(mappedBy = "post")
+    @JsonManagedReference("post-likes")
     private List<Likes> like;
 }

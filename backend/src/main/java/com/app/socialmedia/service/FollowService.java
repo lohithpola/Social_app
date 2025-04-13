@@ -1,5 +1,6 @@
 package com.app.socialmedia.service;
 
+import com.app.socialmedia.controller.NotificationController;
 import com.app.socialmedia.exception.FollowNotFoundException;
 import com.app.socialmedia.exception.UserNotFoundException;
 import com.app.socialmedia.model.Follow;
@@ -18,9 +19,26 @@ public class FollowService {
 
     @Autowired
     private FollowRepo followRepo;
-    @Autowired private UserRepo userRepo;
+    
+    @Autowired 
+    private UserRepo userRepo;
+    
+    @Autowired
+    private NotificationController notificationController;
 
     public Follow followUser(Follow follow) {
+        // Get the user being followed to create a notification
+        Users followingUser = userRepo.findById(follow.getFollowingId())
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + follow.getFollowingId()));
+        
+        // Get the follower's username for the notification
+        Users followerUser = userRepo.findById(follow.getFollowerId())
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + follow.getFollowerId()));
+        
+        // Create notification
+        String content = followerUser.getUserName() + " started following you";
+        notificationController.createAndSendNotification("FOLLOW", content, followingUser);
+        
         return followRepo.save(follow);
     }
 

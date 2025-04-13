@@ -1,95 +1,174 @@
 import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
-import axios from "axios";
 import Media from "./Media";
+import { Box, Typography, Button, CircularProgress } from "@mui/material";
+import RefreshIcon from '@mui/icons-material/Refresh';
+import api from "./api/axios";
 
 const Home = () => {
-  const jwt = JSON.parse(localStorage.getItem("jwt"));
   const [userName1, setUserName] = useState("");
   const [userId, setUserId] = useState(0);
   const [followList, SetFollowList] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const fetchUserName = async () => {
-      try {
-        const response1 = await axios.get("http://localhost:8080/getUser", {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        });
-        setUserName(response1.data.username);
-        setUserId(response1.data.id);
-      } catch (error) {
-        console.log("Error in fetchUserName");
-      }
-    };
-
-    const fetchAllUsers = async () => {
-      try {
-        const response4 = await axios.get("http://localhost:8080/getAllUsers", {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        });
-        setAllUsers(response4.data);
-      } catch (error) {
-        console.log("Error fetching all users");
-      }
-    };
-
-    fetchUserName();
-    fetchAllUsers();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (userId !== 0) {
-      const fetchFollowList = async () => {
+  // Combine all data fetching into one function
+  const fetchData = async () => {
+    setRefreshing(true);
+    try {
+      // Fetch user data
+      const userResponse = await api.get("/getUser");
+      setUserName(userResponse.data.username || userResponse.data.userName);
+      setUserId(userResponse.data.id);
+      
+      // Fetch all users
+      const usersResponse = await api.get("/getAllUsers");
+      if (Array.isArray(usersResponse.data)) {
+        setAllUsers(usersResponse.data);
+      } else if (usersResponse.data && typeof usersResponse.data === 'object') {
+        const arrayData = Object.values(usersResponse.data);
+        setAllUsers(arrayData);
+      } else {
+        console.error("getAllUsers did not return valid data:", usersResponse.data);
+        setAllUsers([]);
+      }
+      
+      // If we got the user ID, fetch follow list
+      if (userResponse.data.id) {
         try {
-          const response2 = await axios.get(
-            `http://localhost:8080/getFollow/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${jwt}`,
-              },
-            }
-          );
-          SetFollowList(response2.data);
+          const followResponse = await api.get(`/getFollow/${userResponse.data.id}`);
+          SetFollowList(followResponse.data || []);
         } catch (error) {
-          console.log("Error fetching follow list");
+          console.error("Error fetching follow list:", error);
+          SetFollowList([]);
         }
-      };
-      fetchFollowList();
+      }
+      
+      setError("");
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setError("Failed to load data. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [userId]);
+  };
 
-  const followingIds = followList.map((follow) => follow.followingId);
-  followingIds.push(userId);
-  const followedUsers = allUsers.filter((user) =>
-    followingIds.includes(user.id)
-  );
+  const handleRefresh = () => {
+    fetchData();
+  };
+
+  // Safely filter users
+  const followingIds = Array.isArray(followList) 
+    ? followList.map((follow) => follow.followingId) 
+    : [];
+    
+  if (userId !== 0) {
+    followingIds.push(userId);
+  }
+  
+  // Only try to filter if allUsers is an array and has items
+  const followedUsers = Array.isArray(allUsers) && allUsers.length > 0
+    ? allUsers.filter((user) => user && user.id && followingIds.includes(user.id))
+    : [];
+
+  // Generate posts from users
+  const posts = followedUsers
+    .flatMap((user) => {
+      // Check if user.posts exists and is an array
+      if (!user || !user.posts || !Array.isArray(user.posts)) {
+        return [];
+      }
+      
+      return user.posts.map((post) => ({
+        ...post,
+        userName: user.userName,
+        profilePic: user.imageData,
+        userId1: user.id,
+      }));
+    })
+    .sort((a, b) => {
+      // Safely handle date comparison
+      try {
+        return new Date(b.timeStamp) - new Date(a.timeStamp);
+      } catch (e) {
+        console.error("Error sorting posts by date:", e);
+        return 0;
+      }
+    });
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" }}>
+          <CircularProgress />
+        </Box>
+      </>
+    );
+  }
 
   return (
     <>
       <Navbar />
-      <div
-        style={{
+      <Box
+        sx={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          padding: "20px",
         }}
       >
-        {[...followedUsers]
-          .flatMap((user) =>
-            user.posts.map((post) => ({
-              ...post,
-              userName: user.userName,
-              profilePic: user.imageData,
-              userId1: user.id,
-            }))
-          )
-          .sort((a, b) => new Date(b.timeStamp) - new Date(a.timeStamp))
-          .map((post, index) => (
+        <Box sx={{ width: '100%', maxWidth: 600, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" component="h1" sx={{ ml: 2 }}>
+            Home Feed
+          </Typography>
+          <Button 
+            variant="text" 
+            startIcon={<RefreshIcon />} 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            sx={{ mr: 2 }}
+          >
+            Refresh
+          </Button>
+        </Box>
+        
+        {error && (
+          <Box sx={{ width: '100%', maxWidth: 600, mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+            <Typography color="error.dark">{error}</Typography>
+            <Button variant="outlined" onClick={handleRefresh} sx={{ mt: 1 }}>
+              Try Again
+            </Button>
+          </Box>
+        )}
+
+        {refreshing && (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mb: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        )}
+
+        {posts.length === 0 ? (
+          <Box sx={{ textAlign: "center", marginTop: "50px", p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No posts to show
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              Follow some users to see their posts or create your own!
+            </Typography>
+            <Button variant="contained" color="primary" onClick={handleRefresh}>
+              Refresh
+            </Button>
+          </Box>
+        ) : (
+          posts.map((post, index) => (
             <Media
               key={`${post.userId1}-${post.id}-${index}`}
               userName={post.userName}
@@ -101,8 +180,9 @@ const Home = () => {
               timeStamp={post.timeStamp}
               likes={post.likes}
             />
-          ))}
-      </div>
+          ))
+        )}
+      </Box>
     </>
   );
 };

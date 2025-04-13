@@ -1,11 +1,14 @@
 package com.app.socialmedia.service;
 
+import com.app.socialmedia.controller.NotificationController;
 import com.app.socialmedia.exception.LikeNotFoundException;
 import com.app.socialmedia.exception.PostNotFoundException;
 import com.app.socialmedia.model.Likes;
 import com.app.socialmedia.model.Post;
+import com.app.socialmedia.model.Users;
 import com.app.socialmedia.repository.LikeRepo;
 import com.app.socialmedia.repository.PostRepo;
+import com.app.socialmedia.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,10 +23,22 @@ public class LikeService {
     private PostRepo postRepo;
     @Autowired
     private LikeRepo likeRepo;
+    @Autowired
+    private UserRepo userRepo;
+    @Autowired
+    private NotificationController notificationController;
 
     public Likes likePost(Likes likes, long postId) {
         Post post = postRepo.findById(postId).orElseThrow(() -> new PostNotFoundException("Post not found with Id"+postId));
         likes.setPost(post);
+        
+        // Create notification for post owner if it's not the same user
+        if (!likes.getUserName().equals(post.getUser().getUserName())) {
+            Users postOwner = post.getUser();
+            String content = likes.getUserName() + " liked your post";
+            notificationController.createAndSendNotification("LIKE", content, postOwner);
+        }
+        
         return likeRepo.save(likes);
     }
 
