@@ -79,5 +79,38 @@ public class UserService {
         List<Users> user=userRepo.findAll();
         return user;
     }
+    
+    /**
+     * Updates the bio for a user
+     * @param username The username of the user to update
+     * @param bio The new bio text
+     * @return The updated user object
+     */
+    public Users updateBio(String username, String bio) {
+        Users user = userRepo.findByUserName(username);
+        if (user == null) {
+            throw new UserNotFoundException("User not found with username: " + username);
+        }
+        
+        user.setBio(bio);
+        return userRepo.save(user);
+    }
+    
+    /**
+     * Updates the profile picture for a user
+     * @param username The username of the user to update
+     * @param image The new profile picture as a MultipartFile
+     * @return The updated user object
+     * @throws IOException If there's an error processing the image file
+     */
+    public Users updateProfilePicture(String username, MultipartFile image) throws IOException {
+        Users user = userRepo.findByUserName(username);
+        if (user == null) {
+            throw new UserNotFoundException("User not found with username: " + username);
+        }
+        
+        byte[] imageData = image.getBytes();
+        user.setImageData(imageData);
+        return userRepo.save(user);
+    }
 }
-

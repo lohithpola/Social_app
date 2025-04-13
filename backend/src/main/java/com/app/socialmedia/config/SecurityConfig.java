@@ -44,7 +44,7 @@ public class SecurityConfig {
                 }))
                 .csrf(AbstractHttpConfigurer::disable).
                 authorizeHttpRequests(request -> request
-                        .requestMatchers("login","addUser","/ws/**","forgot-password","reset-password").permitAll()
+                        .requestMatchers("login","addUser","forgot-password","reset-password").permitAll()
                         .anyRequest().authenticated()).
                 httpBasic(Customizer.withDefaults()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

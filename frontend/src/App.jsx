@@ -10,7 +10,6 @@ import Profile from "./Profile";
 import SinglePost from "./SinglePost";
 import Follow from "./Follow";
 import Search from "./Search";
-import Notifications from "./Notifications";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 
@@ -33,7 +32,6 @@ function App() {
             <Route path="/post/:postId" element={<SinglePost/>}/>
             <Route path="/friends" element={<Follow/>}/>
             <Route path="/search" element={<Search/>}/>
-            <Route path="/notifications" element={<Notifications />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>

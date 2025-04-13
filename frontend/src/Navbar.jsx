@@ -13,18 +13,15 @@ import {
   AddCircleOutline,
 } from "@mui/icons-material";
 import PeopleIcon from "@mui/icons-material/People";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import useNotifications from "./useNotifications";
 
 export default function Navbar() {
   
   const navigate = useNavigate();
   const [responseData, setData] = useState({});
   const jwt = JSON.parse(localStorage.getItem("jwt"));
-  const [unreadCount, setUnreadCount] = useState(0);
   const [userId, setUserId] = useState(null);
   const header = {
     headers: { Authorization: `Bearer ${jwt}` },
@@ -51,16 +48,6 @@ export default function Navbar() {
         console.error("Error fetching user:", error);
       });
   }, []);
-
-  // Hook for real-time notification
-  useNotifications(userId, () => {
-    setUnreadCount((prev) => prev + 1);
-  });
-
-  const handleClick = () => {
-    setUnreadCount(0);
-    navigate("/notifications");
-  };
 
   return (
     <AppBar
@@ -91,12 +78,6 @@ export default function Navbar() {
         <Link to={"/friends"}>
           <PeopleIcon />
         </Link>
-
-        <IconButton onClick={handleClick}>
-          <Badge badgeContent={unreadCount} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
 
         <Box>
           <IconButton>

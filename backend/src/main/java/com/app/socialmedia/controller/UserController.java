@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -58,5 +59,39 @@ public class UserController {
     public ResponseEntity<List<Users>> getSearchUser(){
         return new ResponseEntity<>(userService.searchUser(),HttpStatus.OK);
     }
+    
+    /**
+     * Updates the bio of the authenticated user
+     * @param request HTTP request containing the auth token
+     * @param bioRequest Map containing the bio text
+     * @return Updated user object
+     */
+    @PostMapping("/updateBio")
+    public ResponseEntity<Users> updateBio(HttpServletRequest request, @RequestBody Map<String, String> bioRequest) {
+        String authHeader = request.getHeader("Authorization");
+        String username = jwtService.extractUserName(authHeader.substring(7));
+        String bio = bioRequest.get("bio");
+        
+        Users updatedUser = userService.updateBio(username, bio);
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+    }
+    
+    /**
+     * Updates the profile picture of the authenticated user
+     * @param request HTTP request containing the auth token
+     * @param file The new profile picture
+     * @return Updated user object
+     */
+    @PostMapping("/updateProfilePic")
+    public ResponseEntity<Users> updateProfilePic(HttpServletRequest request, @RequestParam("file") MultipartFile file) {
+        try {
+            String authHeader = request.getHeader("Authorization");
+            String username = jwtService.extractUserName(authHeader.substring(7));
+            
+            Users updatedUser = userService.updateProfilePicture(username, file);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+        } catch (IOException e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
-

@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Button, TextField, Box, Typography, IconButton } from "@mui/material";
 import { PhotoCamera } from "@mui/icons-material";
 import axios from "axios";
+import Navbar from "./Navbar";
+import { useNavigate } from "react-router-dom";
 
 export default function CreatePost() {
+  const navigate = useNavigate();
   const [comment, setComment] = useState("");
   const [media, setMedia] = useState(null);
   const jwt1 = JSON.parse(localStorage.getItem("jwt"));
@@ -39,63 +42,70 @@ export default function CreatePost() {
     console.log("Post submitted:", postData);
 
     try {
-        const response=await axios.post(`http://localhost:8080/createPost`, postData, header);
+        const response = await axios.post(`http://localhost:8080/createPost`, postData, header);
+        setComment("");
+        setMedia(null);
+        navigate("/");
       } catch (error) {
         console.log(error.response?.data || error.message);
       }
-
-    setComment("");
-    setMedia(null);
   };
 
   return message ? (
-    <Typography variant="h4">{message}</Typography>
+    <>
+      <Navbar />
+      <Typography variant="h4">{message}</Typography>
+    </>
   ) : (
-    <Box
-      sx={{
-        p: 3,
-        maxWidth: 400,
-        mx: "auto",
-        textAlign: "center",
-        border: "1px solid #ddd",
-        borderRadius: 2,
-      }}
-    >
-      <Typography variant="h6" gutterBottom>
-        Create Post
-      </Typography>
-      <input
-        accept="image/*,video/*"
-        style={{ display: "none" }}
-        id="media-upload"
-        type="file"
-        onChange={handleMediaUpload}
-      />
-      <label htmlFor="media-upload">
-        <IconButton color="primary" component="span">
-          <PhotoCamera fontSize="large" />
-        </IconButton>
-      </label>
-      {media && (
-        <img
-          src={`data:image/png;base64,${media}`}
-          alt="preview"
-          style={{ width: "100%", marginTop: 10, borderRadius: 5 }}
+    <>
+      <Navbar />
+      <Box
+        sx={{
+          p: 3,
+          maxWidth: 400,
+          mx: "auto",
+          textAlign: "center",
+          border: "1px solid #ddd",
+          borderRadius: 2,
+          mt: 4,
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          Create Post
+        </Typography>
+        <input
+          accept="image/*,video/*"
+          style={{ display: "none" }}
+          id="media-upload"
+          type="file"
+          onChange={handleMediaUpload}
         />
-      )}
-      <TextField
-        fullWidth
-        multiline
-        rows={2}
-        variant="outlined"
-        placeholder="Add a comment..."
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        sx={{ mt: 2 }}
-      />
-      <Button variant="contained" color="primary" fullWidth onClick={handleSubmit} sx={{ mt: 2 }}>
-        Post
-      </Button>
-    </Box>
+        <label htmlFor="media-upload">
+          <IconButton color="primary" component="span">
+            <PhotoCamera fontSize="large" />
+          </IconButton>
+        </label>
+        {media && (
+          <img
+            src={`data:image/png;base64,${media}`}
+            alt="preview"
+            style={{ width: "100%", marginTop: 10, borderRadius: 5 }}
+          />
+        )}
+        <TextField
+          fullWidth
+          multiline
+          rows={2}
+          variant="outlined"
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          sx={{ mt: 2 }}
+        />
+        <Button variant="contained" color="primary" fullWidth onClick={handleSubmit} sx={{ mt: 2 }}>
+          Post
+        </Button>
+      </Box>
+    </>
   );
 }

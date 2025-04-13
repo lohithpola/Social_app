@@ -1,4 +1,4 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Box, Button, TextField, Typography, Alert } from "@mui/material";
 import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,24 +9,50 @@ const Login = () => {
     userName: "",
     password: "",
   });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(logData);
+    setError(""); // Clear previous errors
+    setIsLoading(true);
+    
+    // Remove any existing tokens before attempting to login
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("user");
+    
     try {
       const response = await axios.post(
         "http://localhost:8080/login",
-        logData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        logData
       );
-      window.localStorage.setItem("jwt", JSON.stringify(response.data));
-      alert("Login successful");
-      navigate("/");
+      
+      // Only store JWT and navigate on successful response with valid data
+      if (response.status === 200 && response.data) {
+        console.log("Login successful:", response);
+        localStorage.setItem("jwt", JSON.stringify(response.data));
+        navigate("/");
+      } else {
+        console.log("Login response invalid:", response);
+        setError("Invalid response from server. Please try again.");
+      }
     } catch (error) {
-      console.log(error.response?.data || error.message);
-      alert("Login Unsuccessful");
+      console.error("Login error:", error);
+      
+      if (error.response) {
+        console.log("Error data:", error.response.data);
+        console.log("Error status:", error.response.status);
+        setError(error.response.data?.message || 
+                "Login failed. Server returned " + error.response.status);
+      } else if (error.request) {
+        console.log("Error request:", error.request);
+        setError("No response from server. Please try again later.");
+      } else {
+        console.log("Error message:", error.message);
+        setError("Login failed: " + error.message);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,10 +73,19 @@ const Login = () => {
         p={3}
         boxShadow={3}
         borderRadius={2}
+        maxWidth="400px"
+        width="100%"
       >
         <Typography color="primary" variant="h5" gutterBottom>
           Login
         </Typography>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
         <TextField
           name="userName"
           label="Username"
@@ -58,6 +93,7 @@ const Login = () => {
           fullWidth
           margin="normal"
           onChange={dataHandle}
+          disabled={isLoading}
         />
         <TextField
           name="password"
@@ -67,15 +103,21 @@ const Login = () => {
           fullWidth
           margin="normal"
           onChange={dataHandle}
+          disabled={isLoading}
         />
-        <Box mt={2} display="flex" justifyContent="space-between">
-          <Button type="submit" variant="contained">
-            Log In
+        <Box mt={2} display="flex" justifyContent="space-between" flexWrap="wrap">
+          <Button 
+            type="submit" 
+            variant="contained" 
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging in..." : "Log In"}
           </Button>
           <Button
             variant="text"
             onClick={() => navigate("/forgotpassword")}
             sx={{ mt: 1 }}
+            disabled={isLoading}
           >
             Forgot Password?
           </Button>
@@ -83,6 +125,7 @@ const Login = () => {
             variant="outlined"
             onClick={() => navigate("/signup")}
             sx={{ ml: 2 }}
+            disabled={isLoading}
           >
             Register
           </Button>

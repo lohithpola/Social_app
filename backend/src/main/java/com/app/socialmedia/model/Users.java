@@ -36,4 +36,3 @@ public class Users{
     @OneToMany(mappedBy = "user")
     private List<Notification> notifications;
 }
-

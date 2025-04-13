@@ -99,6 +99,7 @@ const Home = () => {
               postId={post.id}
               userId1={post.userId1}
               timeStamp={post.timeStamp}
+              likes={post.likes}
             />
           ))}
       </div>
