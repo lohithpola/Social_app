@@ -39,6 +39,11 @@ public class LikeService {
             notificationController.createAndSendNotification("LIKE", content, postOwner);
         }
         
+        // Update post likes count
+        int currentLikes = post.getLikes() != null ? post.getLikes() : 0;
+        post.setLikes(currentLikes + 1);
+        postRepo.save(post);
+        
         return likeRepo.save(likes);
     }
 
@@ -57,6 +62,14 @@ public class LikeService {
         }
 
         likeRepo.delete(like);
+        
+        // Update post likes count
+        int currentLikes = post.getLikes() != null ? post.getLikes() : 0;
+        if (currentLikes > 0) {
+            post.setLikes(currentLikes - 1);
+            postRepo.save(post);
+        }
+        
         return true;
     }
 

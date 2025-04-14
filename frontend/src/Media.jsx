@@ -23,9 +23,19 @@ import DialogActions from '@mui/material/DialogActions';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
-export default function Media({ userName, profilePic, content, postImage, postId, userId1, timeStamp, likes: initialLikes = 0 }) {
+export default function Media({
+  userName,
+  profilePic,
+  content,
+  postImage,
+  postId,
+  userId1,
+  timeStamp,
+  likes,
+  onFeedUpdate
+}) {
     const [liked, setLiked] = useState(false);
-    const [likes, setLikes] = useState(initialLikes);
+    const [likesCount, setLikesCount] = useState(likes);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [commentDialog, setCommentDialog] = useState(false);
@@ -33,6 +43,7 @@ export default function Media({ userName, profilePic, content, postImage, postId
     const [likedUsers, setLikedUsers] = useState([]);
     const [currentUser, setCurrentUser] = useState('');
     const [currentUserId, setCurrentUserId] = useState(0);
+    const [error, setError] = useState('');
     
     const jwt = JSON.parse(localStorage.getItem("jwt"));
     
@@ -73,7 +84,7 @@ export default function Media({ userName, profilePic, content, postImage, postId
                 const response = await axios.get(`http://localhost:8080/getPost/${postId}`, {
                     headers: { Authorization: `Bearer ${jwt}` },
                 });
-                setLikes(response.data.likes);
+                setLikesCount(response.data.likes);
             } catch (error) {
                 console.error("Error fetching post likes:", error);
             }
@@ -82,7 +93,7 @@ export default function Media({ userName, profilePic, content, postImage, postId
         fetchCurrentUser();
         checkLiked();
         fetchLikes();
-    }, [postId]);
+    }, [postId, jwt]);
 
     const fetchComments = async () => {
         try {
@@ -101,76 +112,110 @@ export default function Media({ userName, profilePic, content, postImage, postId
     };
 
     const handleLike = async () => {
-        const newLikes = liked ? likes - 1 : likes + 1;
-        setLiked(!liked);
-        setLikes(newLikes);
-
         try {
-            if (!liked) {
+            if (!jwt) {
+                setError("Please log in to like posts");
+                return;
+            }
+
+            // Optimistically update UI first for better user experience
+            const newLikedState = !liked;
+            const newCount = newLikedState ? likesCount + 1 : likesCount - 1;
+            
+            setLiked(newLikedState);
+            setLikesCount(newCount);
+
+            // Then perform the actual API call
+            if (newLikedState) {
                 await axios.post(
                     `http://localhost:8080/updateLike/${postId}`,
                     { userName: currentUser },
                     {
-                        headers: { Authorization: `Bearer ${jwt}` },
+                        headers: {
+                            Authorization: `Bearer ${jwt}`,
+                        },
                     }
                 );
             } else {
                 await axios.delete(`http://localhost:8080/deleteLike/${postId}`, {
-                    headers: { Authorization: `Bearer ${jwt}` },
-                });
-            }
-
-            await axios.post(
-                `http://localhost:8080/updatePost/${postId}`,
-                { likes: newLikes },
-                {
                     headers: {
                         Authorization: `Bearer ${jwt}`,
-                        "Content-Type": "application/json",
                     },
-                }
-            );
+                });
+            }
+            
+            // No need to update the likesCount again here since we're handling it through WebSocket
+            
+            // Call the feed update function to ensure real-time updates
+            if (onFeedUpdate) {
+                onFeedUpdate();
+            }
         } catch (error) {
-            console.error("Error updating likes:", error);
-            // Revert UI changes on error
-            setLiked(liked);
-            setLikes(likes);
+            console.error("Error toggling like:", error);
+            // Revert UI changes if the API call fails
+            setLiked(!liked);
+            setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+            setError("Failed to update like. Please try again.");
         }
     };
 
-    const handleCommentSubmit = async () => {
-        if (!newComment.trim()) return;
-
+    const handleComment = async () => {
         try {
+            if (!jwt) {
+                setError("Please log in to comment");
+                return;
+            }
+
+            if (!newComment.trim()) return;
+
             const response = await axios.post(
                 `http://localhost:8080/setComment/${postId}`,
-                { content: newComment, userName: currentUser },
+                {
+                    userName: currentUser,
+                    content: newComment,
+                },
                 {
                     headers: {
                         Authorization: `Bearer ${jwt}`,
-                        "Content-Type": "application/json",
                     },
                 }
             );
 
-            // Add new comment to the beginning of the list
-            setComments([response.data, ...comments]);
-            setNewComment('');
+            setComments([...comments, response.data]);
+            setNewComment("");
+            
+            // Call the feed update function to ensure real-time updates
+            if (onFeedUpdate) {
+                onFeedUpdate();
+            }
         } catch (error) {
             console.error("Error adding comment:", error);
+            setError("Failed to add comment. Please try again.");
         }
     };
 
     const handleDeleteComment = async (commentId) => {
         try {
+            if (!jwt) {
+                setError("Please log in to delete comments");
+                return;
+            }
+
             await axios.delete(`http://localhost:8080/deleteComment/${commentId}`, {
                 headers: {
                     Authorization: `Bearer ${jwt}`,
                 },
             });
-            setComments(comments.filter(comment => comment.id !== commentId));
+
+            setComments(comments.filter((comment) => comment.id !== commentId));
+            
+            // Call the feed update function to ensure real-time updates
+            if (onFeedUpdate) {
+                onFeedUpdate();
+            }
         } catch (error) {
             console.error("Error deleting comment:", error);
+            setError("Failed to delete comment. Please try again.");
         }
     };
 
@@ -224,7 +269,7 @@ export default function Media({ userName, profilePic, content, postImage, postId
                             size="small" 
                             sx={{ textTransform: 'none', minWidth: 'auto', padding: 0 }}
                         >
-                            {likes} {likes === 1 ? 'like' : 'likes'}
+                            {likesCount} {likesCount === 1 ? 'like' : 'likes'}
                         </Button>
                     </Typography>
                     <IconButton onClick={handleOpenComments}>
@@ -290,7 +335,7 @@ export default function Media({ userName, profilePic, content, postImage, postId
                     />
                     <IconButton 
                         disabled={!newComment.trim()} 
-                        onClick={handleCommentSubmit}
+                        onClick={handleComment}
                         color="primary"
                     >
                         <SendIcon />

@@ -282,11 +282,11 @@ const Notifications = () => {
             <Typography variant="h5" component="h1">
               Notifications 
             </Typography>
-            {!websocketConnected && (
+            {/* {!websocketConnected && (
               <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                 (Live updates unavailable)
               </Typography>
-            )}
+            )} */}
             <IconButton onClick={handleRefresh} size="small" sx={{ ml: 1 }}>
               <RefreshOutlined />
             </IconButton>

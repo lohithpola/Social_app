@@ -56,6 +56,24 @@ public class CommentService {
         }
         return commentRepo.findByPostId(postId);
     }
+    
+    public long getCommentPostId(long commentId) {
+        Comment comment = commentRepo.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException("Comment not found with ID: " + commentId));
+        return comment.getPost().getId();
+    }
+    
+    public String getCommentUsername(long commentId) {
+        Comment comment = commentRepo.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException("Comment not found with ID: " + commentId));
+        
+        // Return either the user's username from the User object or the userName field
+        if (comment.getUser() != null) {
+            return comment.getUser().getUserName();
+        } else {
+            return comment.getUserName();
+        }
+    }
 
     public void deleteComment(long commentId) {
         if (!commentRepo.existsById(commentId)) {

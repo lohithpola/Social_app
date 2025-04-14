@@ -25,54 +25,114 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 const SinglePost = () => {
   const { postId } = useParams();
-  const jwt = JSON.parse(localStorage.getItem("jwt"));
   const [postData, setPostData] = useState(null);
   const [liked, setLiked] = useState(false);
   const [like, setLike] = useState(0);
   const [username1, setuserName] = useState("");
-  const [likedData, setLikedData] = useState([]);
+  const [likedData, setLikeData] = useState([]);
   const [likeDialog, setLikeDialog] = useState(false);
   const [commentsData, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [commentDialog, setCommentDialog] = useState(false);
   const [userId, setUserId] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchUsername = async () => {
+  const fetchUsername = async () => {
+    try {
+      let token;
       try {
-        const response2 = await axios.get(`http://localhost:8080/getUser`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        setuserName(response2.data.username);
-        setUserId(response2.data.id);
-      } catch (error) {
-        console.error("Error fetching username:", error);
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
       }
-    };
+      
+      if (!token) {
+        setError('Please log in to view post');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await axios.get(`http://localhost:8080/getUser`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    const fetchLike = async () => {
+      
+      setuserName(response.data.username);
+      setUserId(response.data.id);
+      console.log(username1);
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchLikeStatus = async () => {
+    try {
+      let token;
       try {
-        const res1 = await axios.get(`http://localhost:8080/getLike/${postId}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        setLiked(res1.data);
-      } catch (error) {
-        console.error("Error fetching like status:", error);
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
       }
-    };
+      
+      if (!token) return;
 
-    fetchUsername();
-    fetchLike();
-  }, []);
+      const response = await axios.get(
+        `http://localhost:8080/getLike/${postId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setLiked(response.data);
+    } catch (error) {
+      console.error("Error fetching like status:", error);
+    }
+  };
+
+  const fetchLikeData = async () => {
+    try {
+      let token;
+      try {
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) return;
+
+      const response = await axios.get(
+        `http://localhost:8080/getLikeData/${postId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setLikeData(response.data);
+      // Refresh like status after fetching like data
+      fetchLikeStatus();
+    } catch (error) {
+      console.error("Error fetching like data:", error);
+    }
+  };
 
   const fetchComments = async () => {
     try {
+      let token;
+      try {
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) return;
+      
       const response = await axios.get(
         `http://localhost:8080/getComments/${postId}`,
         {
           headers: {
-            Authorization: `Bearer ${jwt}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -89,9 +149,18 @@ const SinglePost = () => {
 
   const handleCommentDelete = async (commentId) => {
     try {
+      let token;
+      try {
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) return;
+      
       await axios.delete(`http://localhost:8080/deleteComment/${commentId}`, {
         headers: {
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       setComments(commentsData.filter((comment) => comment.id !== commentId));
@@ -104,12 +173,21 @@ const SinglePost = () => {
     if (!newComment.trim()) return;
 
     try {
+      let token;
+      try {
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) return;
+      
       const response = await axios.post(
         `http://localhost:8080/setComment/${postId}`,
         { content: newComment, userName: username1 },
         {
           headers: {
-            Authorization: `Bearer ${jwt}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -125,13 +203,22 @@ const SinglePost = () => {
 
   const handleShowLikes = async () => {
     try {
+      let token;
+      try {
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) return;
+      
       const response = await axios.get(
         `http://localhost:8080/getLikeData/${postId}`,
         {
-          headers: { Authorization: `Bearer ${jwt}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setLikedData(response.data);
+      setLikeData(response.data);
       setLikeDialog(true);
     } catch (error) {
       console.error("Error fetching liked users:", error);
@@ -139,63 +226,91 @@ const SinglePost = () => {
   };
 
   useEffect(() => {
-    const fetchPost = async () => {
+    fetchUsername();
+    fetchLikeStatus();
+  }, []);
+
+  const handleLikeToggle = async () => {
+    try {
+      let token;
       try {
-        const response = await axios.get(
-          `http://localhost:8080/getPost/${postId}`,
+        token = JSON.parse(localStorage.getItem('jwt'));
+      } catch (e) {
+        token = localStorage.getItem('jwt');
+      }
+      
+      if (!token) {
+        setError("Please log in to like posts");
+        return;
+      }
+
+      if (liked) {
+        // Use DELETE method for unliking
+        await axios.delete(
+          `http://localhost:8080/deleteLike/${postId}`,
           {
-            headers: { Authorization: `Bearer ${jwt}` },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setPostData(response.data);
-        setLike(response.data.likes);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching post:", error);
-        setLoading(false);
-      }
-    };
-    fetchPost();
-  }, [postId]);
-
-  const handleLike = async () => {
-    const newLikes = liked ? like - 1 : like + 1;
-    setLiked(!liked);
-    setLike(newLikes);
-
-    try {
-      if (!liked) {
+      } else {
+        // POST method for liking with username
         await axios.post(
           `http://localhost:8080/updateLike/${postId}`,
           { userName: username1 },
           {
-            headers: { Authorization: `Bearer ${jwt}` },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
-      } else {
-        await axios.delete(`http://localhost:8080/deleteLike/${postId}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
       }
 
-      const response = await axios.post(
-        `http://localhost:8080/updatePost/${postId}`,
-        { likes: newLikes },
-        {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      setPostData(response.data);
+      setLiked(!liked);
+      // Update the UI immediately before fetching data
+      setLike(prevLike => liked ? prevLike - 1 : prevLike + 1);
+      fetchLikeData();
     } catch (error) {
-      console.error("Error updating likes:", error);
-      // Revert UI changes on error
-      setLiked(liked);
-      setLike(like);
+      console.error("Error toggling like:", error);
+      setError("Failed to update like status");
     }
   };
+
+  useEffect(() => {
+    const fetchPostData = async () => {
+      try {
+        let token;
+        try {
+          token = JSON.parse(localStorage.getItem('jwt'));
+        } catch (e) {
+          token = localStorage.getItem('jwt');
+        }
+        
+        if (!token) {
+          setError('Please log in to view post');
+          setLoading(false);
+          return;
+        }
+
+        const response = await axios.get(
+          `http://localhost:8080/getPost/${postId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setPostData(response.data);
+        setLike(response.data.likes || 0);
+        setLoading(false);
+        
+        // After getting post data, fetch like data and comments
+        fetchLikeData();
+        fetchComments();
+      } catch (error) {
+        console.error("Error fetching post:", error);
+        setLoading(false);
+        setError("Failed to load post");
+      }
+    };
+
+    fetchPostData();
+  }, [postId]);
 
   if (loading) return <Typography>Loading...</Typography>;
   if (!postData) return <Typography>Post not found</Typography>;
@@ -209,14 +324,14 @@ const SinglePost = () => {
           avatar={
             <Avatar
               src={
-                postData.user.profilePic
-                  ? `data:image/png;base64,${postData.user.profilePic}`
+                postData.user?.imageData
+                  ? `data:image/png;base64,${postData.user.imageData}`
                   : undefined
               }
-              alt={postData.user.userName || "User"}
+              alt={postData.user?.userName || "User"}
             />
           }
-          title={postData.user.userName || "User"}
+          title={postData.user?.userName || "User"}
           subheader={new Date(postData.timeStamp).toLocaleString()}
         />
       )}
@@ -234,7 +349,7 @@ const SinglePost = () => {
         <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
           <IconButton
             color={liked ? "error" : "default"}
-            onClick={handleLike}
+            onClick={handleLikeToggle}
           >
             <FavoriteIcon />
           </IconButton>
@@ -253,7 +368,7 @@ const SinglePost = () => {
         </Box>
 
         <Typography variant="body1">
-          <strong>{postData.user?.userName || "User"}</strong> {postData.content}
+          <strong>{username1 || "Userr"}</strong> {postData.content}
         </Typography>
       </CardContent>
 

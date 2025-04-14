@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,10 +24,21 @@ public class LikeController {
     private LikeService likeService;
     @Autowired
     private JWTService jwtService;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/updateLike/{postId}")
     public ResponseEntity<Likes> updateLike(@RequestBody Likes likes, @PathVariable long postId) {
-        return new ResponseEntity<>(likeService.likePost(likes,postId), HttpStatus.CREATED);
+        Likes createdLike = likeService.likePost(likes, postId);
+        
+        // Broadcast feed update via WebSocket with post details
+        Map<String, Object> message = new HashMap<>();
+        message.put("action", "like");
+        message.put("postId", postId);
+        message.put("username", likes.getUserName());
+        messagingTemplate.convertAndSend("/topic/feed", message);
+        
+        return new ResponseEntity<>(createdLike, HttpStatus.CREATED);
     }
 
     @GetMapping("/getLikeData/{postId}")
@@ -43,6 +57,15 @@ public class LikeController {
     public ResponseEntity<Boolean> deleteLike(HttpServletRequest request, @PathVariable long postId) {
         String authHeader = request.getHeader("Authorization");
         String username = jwtService.extractUserName(authHeader.substring(7));
-        return new ResponseEntity<>(likeService.removeLike(username, postId), HttpStatus.OK);
+        Boolean result = likeService.removeLike(username, postId);
+        
+        // Broadcast feed update via WebSocket with post details
+        Map<String, Object> message = new HashMap<>();
+        message.put("action", "unlike");
+        message.put("postId", postId);
+        message.put("username", username);
+        messagingTemplate.convertAndSend("/topic/feed", message);
+        
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }
